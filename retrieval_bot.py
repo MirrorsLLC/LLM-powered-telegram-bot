@@ -149,30 +149,6 @@ def create_docs_for_db(data_input, metadata_columns: list, document_columns: lis
 
     return docs
 
-# Function to load or create the vector database
-def get_chroma_db(db_path: str, data_path_or_dataframe, metadata_columns, document_columns):
-    """Load an existing Chroma vector store or create a new one."""
-    embedding = OpenAIEmbeddings()
-
-    # Check if the vector database exists
-    if not os.path.exists(db_path):
-        print("Vector database not found, creating new database...")
-        # Generate the documents since the vector store does not exist
-        docs = create_docs_for_db(data_path_or_dataframe, metadata_columns, document_columns)
-        vectordb = Chroma.from_documents(
-            documents=docs,
-            embedding=embedding,
-            persist_directory=db_path
-        )
-        vectordb.persist()
-    else:
-        print("Loading existing vector database...")
-        vectordb = Chroma(
-            embedding_function=embedding,
-            persist_directory=db_path
-        )
-
-    return vectordb# Function to get the chatbot response
 
 def get_chatbot_response(query, vectorstore, chain):
     result = chain({"input_documents": vectorstore.similarity_search(query, k=3), 
@@ -199,16 +175,14 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text('Goodbye!')
 
 pinecone.init(
-        api_key=os.getenv("PINECONE_API_KEY"),  # Replace with your API key
-        environment=os.getenv("PINECONE_ENV")  # Replace with your environment
+        api_key=os.getenv("PINECONE_API_KEY"),  
+        environment=os.getenv("PINECONE_ENV")  
     )
 
-
+# Load or create the vector store database
 index_name = "telegram-demo"
 embeddings = OpenAIEmbeddings()
-docsearch = Pinecone.from_existing_index(index_name, embeddings)
-# Load or create the vector store database
-vectordb = docsearch#get_chroma_db(DB_PATH, DATA_PATH, METADATA_COLUMNS, DOCUMENT_COLUMNS)
+vectordb = Pinecone.from_existing_index(index_name, embeddings)
 
 def main():
     application = Application.builder().token(TELEGRAM_TOKEN).build()
