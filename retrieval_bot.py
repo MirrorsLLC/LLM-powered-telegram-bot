@@ -14,6 +14,10 @@ from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.vectorstores import Chroma
 from langchain.docstore.document import Document
 
+from langchain.vectorstores import Pinecone
+import pinecone
+
+
 # Load environment variables
 load_dotenv()
 
@@ -194,8 +198,17 @@ async def bot_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text('Goodbye!')
 
+pinecone.init(
+        api_key=os.getenv("PINECONE_API_KEY"),  # Replace with your API key
+        environment=os.getenv("PINECONE_ENV")  # Replace with your environment
+    )
+
+
+index_name = "telegram-demo"
+embeddings = OpenAIEmbeddings()
+docsearch = Pinecone.from_existing_index(index_name, embeddings)
 # Load or create the vector store database
-vectordb = get_chroma_db(DB_PATH, DATA_PATH, METADATA_COLUMNS, DOCUMENT_COLUMNS)
+vectordb = docsearch#get_chroma_db(DB_PATH, DATA_PATH, METADATA_COLUMNS, DOCUMENT_COLUMNS)
 
 def main():
     application = Application.builder().token(TELEGRAM_TOKEN).build()
