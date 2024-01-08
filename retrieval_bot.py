@@ -28,38 +28,6 @@ logger = logging.getLogger(__name__)
 # Initialize global variables
 API_KEY = os.getenv('OPENAI_API_KEY')
 TELEGRAM_TOKEN = os.getenv('REAL_ESTATE_BOT_TOKEN')
-DB_PATH = '/home/armen/Documents/airbnb_demo/chroma_rbnb10000_few_features'
-DATA_PATH = '/home/armen/Documents/miscellaneous/listing_sample_10000.csv'
-METADATA_COLUMNS = ['room_type', 'street', 'property_type', 'price', 'bedrooms']
-DOCUMENT_COLUMNS = ['accommodates',
- 'review_scores_checkin',
- 'reviews_per_month',
- 'listing_url',
- 'review_scores_accuracy',
- 'room_type',
- 'market',
- 'street',
- 'property_type',
- 'review_scores_communication',
- 'cleaning_fee',
- 'host_is_superhost',
- 'security_deposit',
- 'review_scores_value',
- 'first_review',
- 'id',
- 'host_response_rate',
- 'review_scores_location',
- 'maximum_nights',
- 'weekly_price',
- 'price',
- 'review_scores_rating',
- 'bedrooms',
- 'review_scores_cleanliness',
- 'neighbourhood',
- 'host_about',
- 'number_of_reviews',
- 'monthly_price',
- 'host_response_time']
 PROMPT_TEMPLATE = """system: "You are a dedicated and knowledgeable real estate sales agent specializing in the Amsterdam real estate market. Your expertise lies in providing precise, data-driven insights from the VectorDB real estate listings database. You should engage in professional and informative conversations with clients, guiding them through the process of finding a property that meets their needs. Your responses must be based on actual listings from Amsterdam in the database. Avoid conjecture or assumptions and refrain from fabricating details beyond the data provided by VectorDB."
 
 Context: The VectorDB database showcases a diverse range of properties available for rent and sale in Amsterdam. This includes details such as the number of guests a property can accommodate ('accommodates'), the type of room ('room_type'), the price, the number of bedrooms ('bedrooms'), and the property type ('property_type'). You have access to additional location information through 'market', 'street', and 'city' columns.
@@ -103,53 +71,6 @@ memory = ConversationBufferWindowMemory(memory_key="chat_history", input_key="hu
 chain = load_qa_chain(llm, chain_type="stuff", memory=memory, prompt=prompt)
 
 
-# Function to create documents for the vector store
-def create_docs_for_db(data_input, metadata_columns: list, document_columns: list):
-    """Creating Docs to store in vector db using either a CSV file or a pandas DataFrame.
-
-    Args:
-        data_input (Union[str, pd.DataFrame]): Path to the CSV file or a pandas DataFrame.
-        metadata_columns (list): List of column names to include in the metadata.
-        document_columns (list): List of column names to include in the content.
-
-    Returns:
-        list: List of Document objects.
-    """
-
-    # Helper function to convert numpy types to python native types
-    def numpy_to_python(value):
-        if isinstance(value, (np.int64, np.int32)):
-            return int(value)
-        elif isinstance(value, (np.float64, np.float32)):
-            return float(value)
-        else:
-            return value
-
-    # Load data if a path is provided, otherwise assume it's a dataframe
-    if isinstance(data_input, str):
-        data = pd.read_csv(data_input)
-    elif isinstance(data_input, pd.DataFrame):
-        data = data_input
-    else:
-        raise ValueError("Invalid input type. Expected a pandas DataFrame or a path to a CSV file.")
-
-    docs = []
-
-    for i in range(data.shape[0]):
-        raw = data.iloc[i]
-
-        # Fetching content for each column to be included in the primary searchable content
-        page_content = ', '.join([f"{col}: {raw[col]}" for col in document_columns if col in data.columns])
-
-        # Creating metadata dictionary by converting numpy types to python types
-        raw_metadata = {col: numpy_to_python(raw[col]) for col in metadata_columns if col in data.columns}
-
-        doc = Document(page_content=page_content, metadata=raw_metadata)
-        docs.append(doc)
-
-    return docs
-
-
 def get_chatbot_response(query, vectorstore, chain):
     result = chain({"input_documents": vectorstore.similarity_search(query, k=3), 
                     "human_input": query}, 
@@ -162,6 +83,7 @@ async def generate_response(user_id, user_message):
     # Use VectorDB and the chain to generate the response
     bot_response = get_chatbot_response(user_message, vectordb, chain)
     return bot_response
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text('Hello! I am your real estate assistant.')
 
