@@ -4,6 +4,7 @@ import os
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 import openai
+import httpx
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -15,6 +16,9 @@ TELEGRAM_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 
 # Set your OpenAI API key here
 openai.api_key = API_KEY
+http_client = httpx.AsyncClient() 
+openai_client = openai.AsyncOpenAI(http_client=http_client)
+
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -97,7 +101,7 @@ async def generate_response(user_id, user_message):
     conversation_history[user_id].append({"role": "user", "content": user_message})
 
     try:
-        response = openai.ChatCompletion.create(
+        response = await openai_client.chat.completions.create(
             model="ft:gpt-3.5-turbo-1106:mirrors::8NmYw5a7",  # Use the appropriate model identifier
             temperature=0.6,
             messages=conversation_history[user_id]
